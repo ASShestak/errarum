@@ -1,0 +1,279 @@
+<?php
+
+define('ERRATUM_MAX_LENGTH', 50);
+define('ERRATUM_MAIL_LIMIT', 10);
+
+/**
+* Implements hook_menu().
+*/
+function erratum_menu() {
+  $items['admin/config/content/erratum'] = array(
+    'title' => 'Erratum',
+    'description' => 'Configure default settings for Erratum.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('erratum_admin_settings'),
+    'access arguments' => array('administer site configuration'),
+    'file' => 'erratum.admin.inc',
+  );
+  $items['admin/reports/erratum'] = array(
+    'title' => 'Erratum reports',
+    'description' => 'View reports that have been logged for Erratum.',
+    'page callback' => 'erratum_overview',
+    'access arguments' => array('access site reports'),
+    'file' => 'erratum.admin.inc',
+  );
+  $items['admin/reports/erratum/%'] = array(
+    'title' => 'Details',
+    'description' => 'View details of report that has been logged for Erratum.',
+    'page callback' => 'erratum_report',
+    'page arguments' => array(3),
+    'access arguments' => array('access site reports'),
+    'file' => 'erratum.admin.inc',
+  );
+
+  return $items;
+}
+
+/**
+ * Implements hook_theme().
+ */
+function erratum_theme($existing, $type, $theme, $path) {
+  return array(
+    'erratum_popup' => array(
+      'template' => 'erratum-popup',
+      'variables' => array('form' => NULL),
+    ),
+  );
+}
+
+/**
+ * Implements hook_field_info_alter().
+ */
+function erratum_field_info_alter(&$info) {
+  foreach ($info as $field_type => $field_type_info) {
+    if (_erratum_check_field_type($field_type)) {
+      $info[$field_type]['settings']['erratum_use'] = FALSE;
+      $info[$field_type]['settings']['erratum_mail'] = NULL;
+      $info[$field_type]['settings']['erratum_popup_text'] = NULL;
+      $info[$field_type]['settings']['erratum_max_length'] = NULL;
+    }
+  }
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function erratum_form_field_ui_field_edit_form_alter(&$form, &$form_state, $form_id) {
+  if (_erratum_check_field_type($form['#field']['type'])) {
+    $settings = $form['#field']['settings'];
+    $states = array(
+      'visible' => array(
+        ':input[name="field[settings][erratum_use]"]' => array('checked' => TRUE),
+      )
+    );
+    $form['field']['settings']['erratum_use'] = array(
+      '#title' => t('Use Erratum for this field.'),
+      '#type' => 'checkbox',
+      '#default_value' => $settings['erratum_use'],
+    );
+    $form['field']['settings']['erratum_mail'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Erratum e-mail address'),
+      '#default_value' => $settings['erratum_mail'],
+      '#description' => t('Email address for sending notifications about mistakes.'),
+      '#element_validate' => array('erratum_element_validate_email'),
+      '#states' => $states,
+    );
+    $form['field']['settings']['erratum_popup_text'] = array(
+      '#type' => 'textarea',
+      '#title' => t('Erratum popup text'),
+      '#default_value' => $settings['erratum_popup_text'],
+      '#states' => $states,
+    );
+    $form['field']['settings']['erratum_max_length'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Erratum maximum length'),
+      '#default_value' => $settings['erratum_max_length'],
+      '#description' => t('The maximum length of the selected text in characters.'),
+      '#element_validate' => array('element_validate_integer_positive'),
+      '#states' => $states,
+    );
+  }
+}
+
+/**
+ * Form element validation handler for email elements.
+ */
+function erratum_element_validate_email($element, &$form_state) {
+    $value = $element['#value'];
+
+    if ($value != '' && !valid_email_address($value)) {
+        form_error($element, t('E-mail address %mail is not valid.', array('%mail' => $value)));
+    }
+}
+
+/**
+ * Implements hook_field_display_alter().
+ */
+function erratum_field_display_alter(&$display, $context) {
+  $field = $context['field'];
+  $entity_type = $context['entity_type'];
+  $instance = $context['instance'];
+
+  if (
+      _erratum_check_field_type($field['type']) &&
+      $display['type'] != 'hidden' &&
+      $field['settings']['erratum_use']
+  ) {
+
+    $field_key = _erratum_generate_field_key($field['field_name'], $entity_type);
+    $erratum_settings = &drupal_static('erratum_settings', array());
+    $erratum_settings[$field_key] = array(
+      'entity_type' => $entity_type,
+      'field_name' => $instance['label'] . ' (' . $instance['field_name'] . ')',
+      'mail' => $field['settings']['erratum_mail'] ? : variable_get('erratum_mail', ''),
+      'popup_text' => $field['settings']['erratum_popup_text'] ? : variable_get('erratum_popup_text', ''),
+      'max_length' => $field['settings']['erratum_max_length'] ? : variable_get('erratum_max_length', ''),
+    );
+  }
+}
+
+/**
+ * Implements hook_page_alter().
+ */
+function erratum_page_alter(&$page) {
+  if (!path_is_admin(current_path())) {
+    $page['page_bottom']['erratum']= array(
+      '#type' => 'markup',
+      '#markup' => theme('erratum_popup', array('form' => drupal_get_form('erratum_popup_form'))),
+    );
+    $settings = array(
+      'erratum' => drupal_static('erratum_settings'),
+    );
+    drupal_add_js($settings, 'setting');
+    drupal_add_js(drupal_get_path('module', 'erratum') . '/erratum-popup.js');
+    drupal_add_css(drupal_get_path('module', 'erratum') . '/erratum-popup.css');
+  }
+}
+
+/**
+ * Implements hook_preprocess_field().
+ */
+function erratum_preprocess_field(&$variables, $hook) {
+  $field_type = $variables['element']['#field_type'];
+
+  if ( _erratum_check_field_type($field_type)) {
+    $entity_type = $variables['element']['#entity_type'];
+    $field_name = $variables['element']['#field_name'];
+    $entity = $variables['element']['#object'];
+    list($id, $vid, $bundle) = entity_extract_ids($entity_type, $entity);
+
+    $variables['classes_array'][] = 'erratum-use';
+    $variables['attributes_array']['field-key'] = _erratum_generate_field_key($field_name, $entity_type);
+    $variables['attributes_array']['field-entity-id'] = $id;
+  }
+}
+
+/**
+ * Typo report form
+ */
+function erratum_popup_form($form, &$form_state) {
+  global $user;
+
+  $form['erratum_json'] = array(
+    '#type' => 'hidden',
+    '#default_value' => '',
+    '#attributes' => array('id' => 'erratum-json'),
+  );
+  $form['erratum_location'] = array(
+    '#type' => 'hidden',
+    '#default_value' => url(current_path(), array('absolute' => TRUE)),
+    '#attributes' => array('id' => 'erratum-location'),
+  );
+  $form['erratum_ip'] = array(
+    '#type' => 'value',
+    '#value' => ip_address(),
+  );
+  $form['erratum_uid'] = array(
+    '#type' => 'value',
+    '#value' => $user->uid,
+  );
+  $form['erratum_submit'] = array(
+    '#type' => 'button',
+    '#value' => t('Send'),
+    '#ajax' => array(
+      'callback' => 'erratum_save_report',
+      'wrapper' => 'erratum-overlay-body',
+      'method' => 'replace',
+      'effect' => 'fade',
+    ),
+  );
+
+  return $form;
+}
+
+function erratum_save_report($form, $form_state) {
+  $values = $form_state['values'];
+
+  if (!empty($values['erratum_json']) && $json = json_decode($values['erratum_json'])) {
+    $countReports = db_select('erratum', 'e')
+        ->condition('e.ip', $values['erratum_ip'])
+        ->countQuery()
+        ->execute()
+        ->fetchField();
+    $erratum_mail_limit = variable_get('erratum_mail_limit', ERRATUM_MAIL_LIMIT);
+
+    if ($countReports < $erratum_mail_limit || $erratum_mail_limit == 0) {
+      $eid = db_insert('erratum')->fields(
+        array(
+          'entity_type' => check_plain($json->entity_type),
+          'entity_id' => check_plain($json->entity_id),
+          'field_name' => check_plain($json->field_name),
+          'fragment' => check_plain($json->fragment),
+          'location' => check_url($values['erratum_location']),
+          'uid' => $values['erratum_uid'],
+          'ip' => $values['erratum_ip'],
+          'timestamp' => time()
+        )
+      )->execute();
+
+      if ($eid && !empty($json->mail)) {
+          drupal_mail('erratum', 'new_report', $json->mail, language_default());
+      }
+
+      $message = '<div id="erratum-message" class="success-message">' .
+          t('Your report has been sent. Thank you.') . '</div>';
+    }
+    else {
+      $message = '<div id="erratum-message" class="error-message">' .
+          t('Unfortunately, you have exceeded the limit of records.') . '</div>';
+    }
+  }
+  else {
+    $message = '<div id="erratum-message" class="error-message">' .
+        t('Unfortunately, your report has not been sent. Try again later.') . '</div>';
+  }
+
+  $commands = array();
+  $commands[] = ajax_command_invoke('#erratum-popup-form', 'hide');
+  $commands[] = ajax_command_after('#erratum-popup-form', $message);
+
+  return array('#type' => 'ajax', '#commands' => $commands);
+}
+
+/**
+ * @param string $field_type
+ * @return bool
+ */
+function _erratum_check_field_type($field_type) {
+  return in_array($field_type, array('text_long', 'text_with_summary'));
+}
+
+/**
+ * @param string $field_name
+ * @param string $entity_type
+ * @return string
+ */
+function _erratum_generate_field_key($field_name, $entity_type) {
+  return implode('_', array('erratum', $field_name, $entity_type));
+}

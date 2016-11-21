@@ -1,0 +1,82 @@
+<?php
+
+/**
+ * Implements hook_schema().
+ */
+function erratum_schema() {
+  $schema['erratum'] = array(
+    'description' => 'Table that contains reports for erratum.',
+    'fields' => array(
+      'id' => array(
+        'type' => 'serial',
+        'not null' => TRUE,
+        'unsigned' => TRUE,
+      ),
+      'uid' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'entity_id' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'entity_type' => array(
+        'type' => 'varchar',
+        'length' => 128,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'field_name' => array(
+        'type' => 'varchar',
+        'length' => 32,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'fragment' => array(
+        'type' => 'text',
+        'not null' => TRUE,
+        'size' => 'big',
+      ),
+      'location'  => array(
+        'type' => 'text',
+        'not null' => TRUE,
+      ),
+      'ip' => array(
+        'type' => 'varchar',
+        'length' => 15,
+        'not null' => TRUE,
+      ),
+      'timestamp' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+    ),
+    'primary key' => array('id'),
+  );
+
+  return $schema;
+}
+
+/**
+ * Implements hook_install().
+ */
+function erratum_install() {
+  variable_set('erratum_mail', variable_get('site_mail', ''));
+  variable_set('erratum_mail_limit', ERRATUM_MAIL_LIMIT);
+  variable_set('erratum_popup_text', t('Spelling error in text:'));
+  variable_set('erratum_max_length', ERRATUM_MAX_LENGTH);
+}
+
+/**
+ * Implements hook_uninstall().
+ */
+function erratum_uninstall() {
+  variable_del('erratum_mail');
+  variable_del('erratum_mail_limit');
+  variable_del('erratum_popup_text');
+  variable_del('erratum_max_length');
+}
+

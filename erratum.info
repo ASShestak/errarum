@@ -1,0 +1,5 @@
+name = Erratum
+description = Erratum
+package = Erratum
+core = 7.x
+configure = admin/config/content/erratum
