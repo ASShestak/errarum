@@ -215,7 +215,7 @@ function erratum_popup_form($form, &$form_state) {
 function erratum_save_report($form, $form_state) {
   $values = $form_state['values'];
 
-  if (!empty($values['erratum_json']) && $json = json_decode($values['erratum_json'])) {
+  if (!empty($values['erratum_json']) && ($json = json_decode($values['erratum_json']))) {
     $countReports = db_select('erratum', 'e')
         ->condition('e.ip', $values['erratum_ip'])
         ->countQuery()
