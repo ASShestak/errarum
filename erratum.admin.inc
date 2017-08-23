@@ -62,14 +62,14 @@ function erratum_overview() {
   );
 
   $query = db_select('erratum', 'e')
-      ->extend('PagerDefault')
-      ->extend('TableSort');
+    ->extend('PagerDefault')
+    ->extend('TableSort');
 
   $result = $query
-      ->fields('e', array('id', 'entity_type', 'entity_id', 'fragment', 'timestamp'))
-      ->limit(50)
-      ->orderByHeader($header)
-      ->execute();
+    ->fields('e', array('id', 'entity_type', 'entity_id', 'fragment', 'timestamp'))
+    ->limit(50)
+    ->orderByHeader($header)
+    ->execute();
 
   $rows = array();
 
@@ -106,7 +106,12 @@ function erratum_overview() {
  * @return array|string
  */
 function erratum_report($id) {
-  $report = db_query('SELECT e.* FROM {erratum} e WHERE e.id = :id', array(':id' => $id))->fetchObject();
+  $report = db_select('erratum', 'e')
+    ->fields('e')
+    ->condition('e.id', $id)
+    ->execute()
+    ->fetchObject();
+
   if ($report) {
     $url = _erratum_prepare_edit_url($report->entity_type, $report->entity_id);
     $rows = array(
