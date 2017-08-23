@@ -171,6 +171,7 @@ function erratum_preprocess_field(&$variables, $hook) {
     $variables['classes_array'][] = 'erratum-use';
     $variables['attributes_array']['field-key'] = _erratum_generate_field_key($field_name, $entity_type);
     $variables['attributes_array']['field-entity-id'] = $id;
+    $variables['attributes_array']['field-entity-vid'] = $vid;
   }
 }
 
@@ -228,6 +229,7 @@ function erratum_save_report($form, $form_state) {
         array(
           'entity_type' => check_plain($json->entity_type),
           'entity_id' => check_plain($json->entity_id),
+          'entity_vid' => check_plain($json->entity_vid),
           'field_name' => check_plain($json->field_name),
           'fragment' => check_plain($json->fragment),
           'location' => check_url($values['erratum_location']),

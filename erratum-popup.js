@@ -33,6 +33,7 @@
             var json = {
               entity_type: fieldSettings.entity_type,
               entity_id: data.entity_id,
+              entity_vid: data.entity_vid,
               field_name: fieldSettings.field_name,
               fragment: data.fragment,
               mail: fieldSettings.mail
@@ -108,7 +109,8 @@
           fragment: textRange.replace(/\s+/g, ' '),
           suf: suf.substring(0, 60).replace(/\s+\S{1,10}$/, '').replace(/\s+/g, ' '),
           key: parent.getAttribute('field-key'),
-          entity_id: parent.getAttribute('field-entity-id')
+          entity_id: parent.getAttribute('field-entity-id'),
+          entity_vid: parent.getAttribute('field-entity-vid')
         }
       },
       getParent: function(el, selector) {

@@ -124,6 +124,10 @@ function erratum_report($id) {
         $path ? l($report->entity_id, $path) : $report->entity_id,
       ),
       array(
+        array('data' => t('Entity Revision'), 'header' => TRUE),
+        $report->entity_vid,
+      ),
+      array(
         array('data' => t('Entity Type'), 'header' => TRUE),
         $report->entity_type,
       ),

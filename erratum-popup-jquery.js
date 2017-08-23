@@ -26,6 +26,7 @@
             var json = {
               entity_type: data.entity_type,
               entity_id: data.entity_id,
+              entity_vid: data.entity_vid,
               field_name: data.field_name,
               fragment: data.fragment,
               mail: data.mail
@@ -102,7 +103,8 @@
           fragment: textRange.replace(/\s+/g, ' '),
           suf: suf.substring(0, 60).replace(/\s+\S{1,10}$/, '').replace(/\s+/g, ' '),
           key: parent.attr('field-key'),
-          entity_id: parent.attr('field-entity-id')
+          entity_id: parent.attr('field-entity-id'),
+          entity_vid: parent.attr('field-entity-vid')
         }
       },
       onKeyPress: function(e) {

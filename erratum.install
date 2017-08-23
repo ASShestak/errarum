@@ -22,6 +22,11 @@ function erratum_schema() {
         'not null' => TRUE,
         'default' => 0,
       ),
+      'entity_vid' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
       'entity_type' => array(
         'type' => 'varchar',
         'length' => 128,
