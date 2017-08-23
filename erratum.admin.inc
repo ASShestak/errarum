@@ -74,16 +74,16 @@ function erratum_overview() {
   $rows = array();
 
   foreach ($result as $item) {
-    $url = _erratum_prepare_edit_url($item->entity_type, $item->entity_id);
+    $path = _erratum_get_entity_path($item->entity_type, $item->entity_id);
     $rows[] = array('data' =>
-        array(
-          $item->id,
-          $item->entity_type,
-          $item->entity_id,
-          $url ? l($item->fragment, $url) : $item->fragment,
-          format_date($item->timestamp, 'short'),
-          l(t('View'), 'admin/reports/erratum/' . $item->id),
-        )
+      array(
+        $item->id,
+        $item->entity_type,
+        $path ? l($item->entity_id, $path) : $item->entity_id,
+        $item->fragment,
+        format_date($item->timestamp, 'short'),
+        l(t('View'), 'admin/reports/erratum/' . $item->id),
+      )
     );
   }
 
@@ -113,7 +113,7 @@ function erratum_report($id) {
     ->fetchObject();
 
   if ($report) {
-    $url = _erratum_prepare_edit_url($report->entity_type, $report->entity_id);
+    $path = _erratum_get_entity_path($report->entity_type, $report->entity_id);
     $rows = array(
       array(
         array('data' => t('ID'), 'header' => TRUE),
@@ -121,7 +121,7 @@ function erratum_report($id) {
       ),
       array(
         array('data' => t('Entity ID'), 'header' => TRUE),
-        $report->entity_id,
+        $path ? l($report->entity_id, $path) : $report->entity_id,
       ),
       array(
         array('data' => t('Entity Type'), 'header' => TRUE),
@@ -133,7 +133,7 @@ function erratum_report($id) {
       ),
       array(
         array('data' => t('Fragment'), 'header' => TRUE),
-          $url ? l($report->fragment, $url) : $report->fragment,
+        $report->fragment,
       ),
       array(
         array('data' => t('Location'), 'header' => TRUE),
@@ -170,21 +170,14 @@ function erratum_report($id) {
  * @param int $id
  * @return string
  */
-function _erratum_prepare_edit_url($type, $id) {
-  switch ($type) {
-    case 'user':
-      $url = 'user/' . $id . '/edit';
-      break;
-    case 'taxonomy_term':
-      $url = 'taxonomy/term/' . $id . '/edit';
-      break;
-    case 'node':
-      $url= 'node/' . $id . '/edit';
-      break;
-    default:
-      $url = '';
-      break;
+function _erratum_get_entity_path($type, $id) {
+  $path = '';
+  $entity = entity_load($type, array($id));
+
+  if (!empty($entity)) {
+    $uri = entity_uri($type, reset($entity));
+    $path = $uri['path'];
   }
 
-  return $url;
+  return $path;
 }
