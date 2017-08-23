@@ -151,7 +151,8 @@ function erratum_page_alter(&$page) {
       'erratum' => drupal_static('erratum_settings'),
     );
     drupal_add_js($settings, 'setting');
-    drupal_add_js(drupal_get_path('module', 'erratum') . '/erratum-popup.js');
+    drupal_add_library('system', 'ui.dialog');
+    drupal_add_js(drupal_get_path('module', 'erratum') . '/erratum-popup-jquery.js');
     drupal_add_css(drupal_get_path('module', 'erratum') . '/erratum-popup.css');
   }
 }
@@ -204,7 +205,7 @@ function erratum_popup_form($form, &$form_state) {
     '#value' => t('Send'),
     '#ajax' => array(
       'callback' => 'erratum_save_report',
-      'wrapper' => 'erratum-overlay-body',
+      'wrapper' => 'erratum-popup',
       'method' => 'replace',
       'effect' => 'fade',
     ),

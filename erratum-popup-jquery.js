@@ -2,22 +2,13 @@
   $(document).ready(function() {
     var erratum = {
       fields: Drupal.settings.erratum,
-      popup: $('#erratum-overlay'),
+      popup: $('#erratum-popup'),
 
       init: function() {
         var th = this;
         $(document).bind('keypress', function(e) {
           th.onKeyPress(e);
         });
-        this.popup.find('#erratum-overlay-close').bind('click', function(e) {
-          th.closePopup();
-        });
-      },
-      closePopup: function() {
-        this.popup.hide();
-        this.popup.find('#erratum-json').val('');
-        this.popup.find('#erratum-message').remove();
-        this.popup.find('#erratum-popup-form').show();
       },
       updatePopup: function(data) {
         if (typeof this.fields[data.key] !== 'undefined') {
@@ -30,12 +21,24 @@
               field_name: data.field_name,
               fragment: data.fragment,
               mail: data.mail
-            }
+            };
 
-            this.popup.find('#erratum-selected-fragment').html(data.pre + '<span>' + data.fragment + '</span>' + data.suf);
-            this.popup.find('#erratum-popup-text').html(data.popup_text);
-            this.popup.find('#erratum-json').val(JSON.stringify(json));
-            this.popup.show();
+            this.popup.dialog({
+              resizable: false,
+              width: 400,
+              modal: true,
+              open: function(event, ui) {
+                $(this).find('#erratum-selected-fragment').html(data.pre + '<span>' + data.fragment + '</span>' + data.suf);
+                $(this).find('#erratum-popup-text').html(data.popup_text);
+                $(this).find('#erratum-json').val(JSON.stringify(json));
+              },
+              close: function(event, ui) {
+                $(this).find('#erratum-json').val('');
+                $(this).find('#erratum-message').remove();
+                $(this).find('#erratum-popup-form').show();
+              }
+            });
+            this.popup.dialog('open');
           }
         }
       },
@@ -71,15 +74,15 @@
               range = selectedText.createRange();
               textRange = range.text;
               newRange = selectedText.createRange();
-              newRange.moveStart("character", -60);
-              newRange.moveEnd("character", -textRange.length);
+              newRange.moveStart('character', -60);
+              newRange.moveEnd('character', -textRange.length);
               pre = newRange.text;
               newRange = selectedText.createRange();
-              newRange.moveEnd("character", 60);
-              newRange.moveStart("character", textRange.length);
+              newRange.moveEnd('character', 60);
+              newRange.moveStart('character', textRange.length);
               suf = newRange.text;
             } else {
-              textRange = "" + selectedText;
+              textRange = '' + selectedText;
             }
           }
           // Remove whitespaces.

@@ -1,66 +1,26 @@
-#erratum-overlay {
-    display: none;
-    position: fixed;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    z-index: 1000;
-    background-image:url(images/background.png);
-}
-#erratum-overlay-close {
-    background: transparent url(images/close.png) no-repeat;
-    display: block;
-    height: 26px;
-    width: 26px;
-    position: absolute;
-    top: 0;
-    right: -25px;
-}
-#erratum-overlay-content {
-    position: relative;
-    width: 400px;
-    margin: 200px auto;
-    background-color: #fff;
-
-}
-#erratum-overlay-header {
-    height: 26px;
-    line-height: 26px;
-    overflow: hidden;
-    margin: 0 10px;
-    border-bottom: 1px dotted #ccc;
-    color: #ccc;
-}
-#erratum-overlay-body {
-    padding: 10px;
-}
-#erratum-popup-form {
-    text-align: right;
+#erratum-popup {
+    font-size: 14px;
 }
 #erratum-popup-form .form-submit {
     margin: 0;
+    float: right;
 }
-#erratum-message{
-    height: 30px;
-    line-height: 30px;
+#erratum-message {
+    height: 27px;
+    line-height: 27px;
     text-align: right;
 }
-#erratum-message.success-message{
+#erratum-message.success-message {
     color: green;
 }
-#erratum-message.error-message{
+#erratum-message.error-message {
     color: red;
 }
 #erratum-popup-text {
-    text-align: left;
-    line-height: 16px;
-    font-size: 14px;
     margin: 0;
     padding: 0;
 }
 #erratum-selected-fragment {
-    text-align: left;
     background: #f7f7f7;
     margin: 10px 0;
     padding: 5px;
