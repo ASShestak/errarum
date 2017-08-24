@@ -218,29 +218,27 @@ function erratum_save_report($form, $form_state) {
   $values = $form_state['values'];
 
   if (!empty($values['erratum_json']) && ($json = json_decode($values['erratum_json']))) {
-    $countReports = db_select('erratum', 'e')
+    $count_reports = db_select('erratum', 'e')
         ->condition('e.ip', $values['erratum_ip'])
         ->countQuery()
         ->execute()
         ->fetchField();
     $erratum_mail_limit = variable_get('erratum_mail_limit', ERRATUM_MAIL_LIMIT);
 
-    if ($countReports < $erratum_mail_limit || $erratum_mail_limit == 0) {
-      $eid = db_insert('erratum')->fields(
-        array(
-          'entity_type' => check_plain($json->entity_type),
-          'entity_id' => check_plain($json->entity_id),
-          'entity_vid' => check_plain($json->entity_vid),
-          'field_name' => check_plain($json->field_name),
-          'fragment' => check_plain($json->fragment),
-          'location' => check_url($values['erratum_location']),
-          'uid' => $values['erratum_uid'],
-          'ip' => $values['erratum_ip'],
-          'timestamp' => time()
-        )
-      )->execute();
+    if ($count_reports < $erratum_mail_limit || $erratum_mail_limit == 0) {
+      $entity = new stdClass();
+      $entity->entity_type = check_plain($json->entity_type);
+      $entity->entity_id = check_plain($json->entity_id);
+      $entity->entity_vid = check_plain($json->entity_vid);
+      $entity->field_name = check_plain($json->field_name);
+      $entity->fragment = check_plain($json->fragment);
+      $entity->location = check_url($values['erratum_location']);
+      $entity->uid = $values['erratum_uid'];
+      $entity->ip = $values['erratum_ip'];
 
-      if ($eid && !empty($json->mail)) {
+      entity_get_controller('erratum_report')->save($entity);
+
+      if (!empty($json->mail)) {
           drupal_mail('erratum', 'new_report', $json->mail, language_default());
       }
 
@@ -262,6 +260,46 @@ function erratum_save_report($form, $form_state) {
   $commands[] = ajax_command_after('#erratum-popup-form', $message);
 
   return array('#type' => 'ajax', '#commands' => $commands);
+}
+
+/**
+ * Implements hook_entity_info().
+ */
+function erratum_entity_info() {
+  return array(
+    'erratum_report' => array(
+      'label' => t('Erratum Report'),
+      'controller class' => 'ErratumReportController',
+      'base table' => 'erratum',
+      'entity keys' => array(
+        'id' => 'id',
+      ),
+      'module' => 'erratum',
+    ),
+  );
+}
+
+/**
+ * ErratumReportController extends DrupalDefaultEntityController.
+ */
+class ErratumReportController extends DrupalDefaultEntityController {
+
+  /**
+   * Saves the report using drupal_write_record().
+   */
+  public function save($entity) {
+    $entity->timestamp = time();
+
+    // Invoke hook_entity_presave().
+    module_invoke_all('entity_presave', $entity, 'erratum_report');
+
+    drupal_write_record('erratum', $entity);
+
+    // Invoke hook_entity_save().
+    module_invoke_all('entity_save', $entity, 'erratum_report');
+
+    return $entity;
+  }
 }
 
 /**

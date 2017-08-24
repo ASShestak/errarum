@@ -106,13 +106,10 @@ function erratum_overview() {
  * @return array|string
  */
 function erratum_report($id) {
-  $report = db_select('erratum', 'e')
-    ->fields('e')
-    ->condition('e.id', $id)
-    ->execute()
-    ->fetchObject();
+  $reports = entity_load('erratum_report', array($id));
 
-  if ($report) {
+  if ($reports) {
+    $report = reset($reports);
     $path = _erratum_get_entity_path($report->entity_type, $report->entity_id);
     $rows = array(
       array(
