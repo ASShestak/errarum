@@ -1,0 +1,126 @@
+<?php
+
+class ErratumUnitTest extends DrupalUnitTestCase {
+
+  public static function getInfo() {
+    return array(
+      'name' => 'Erratum unit tests',
+      'description' => 'Test that functions in Erratum module work properly',
+      'group' => 'Erratum',
+    );
+  }
+
+  public function setUp() {
+    drupal_load('module', 'erratum');
+    parent::setUp();
+  }
+
+  public function testErratumGenerateFieldKeyFunction() {
+    $test_cases = array(
+        'erratum_body_node' => array('entity_type' => 'node', 'field' => 'body'),
+        'erratum_address_user' => array('entity_type' => 'user', 'field' => 'address'),
+        'erratum_description_taxonomy' => array('entity_type' => 'taxonomy', 'field' => 'description'),
+        'erratum__node' => array('entity_type' => 'node', 'field' => ''),
+        'erratum_details_' => array('entity_type' => '', 'field' => 'details'),
+        'erratum__' => array('entity_type' => '', 'field' => ''),
+    );
+
+    foreach ($test_cases as $expected_result => $accept_data) {
+      $result = _erratum_generate_field_key($accept_data['field'], $accept_data['entity_type']);
+      $message_parameters = array(
+        '@field' => $accept_data['field'],
+        '@entity_type' => $accept_data['entity_type'],
+        '@result' => $result,
+      );
+      $this->assertIdentical($result, $expected_result, t("Generated field key for '@field' in '@entity_type', result = '@result'", $message_parameters));
+    }
+  }
+
+  public function testErratumCheckFieldTypeFunction() {
+    $test_cases = array(
+      'text_long' => true,
+      'text_with_summary' => true,
+      'image' => false,
+      'boolean' => false,
+      $this->randomName() => false,
+    );
+
+    foreach ($test_cases as $accept_type => $expected_result) {
+      $result = _erratum_check_field_type($accept_type);
+      $message_parameters = array(
+        '@type' => $accept_type,
+        '@result' => $result ? 'can' : 'cannot',
+      );
+      $this->assertIdentical($result, $expected_result, t("Erratum module @result be used for field with type '@type'", $message_parameters));
+    }
+  }
+}
+
+class ErratumTestCase extends DrupalWebTestCase {
+
+  public static function getInfo() {
+    return array(
+      'name' => 'Erratum case tests',
+      'description' => 'Test that any case in Erratum module works properly',
+      'group' => 'Erratum',
+    );
+  }
+
+  function setUp() {
+    parent::setUp(array('erratum'));
+  }
+
+  public function testMenuHook() {
+    $test_menu_items = array(
+      'admin/config/content/erratum',
+      'admin/reports/erratum',
+      'admin/reports/erratum/%',
+    );
+
+    list($menu, $masks) = menu_router_build();
+
+    foreach ($test_menu_items as $item) {
+      $message_parameters = array(
+        '@item' => $item,
+      );
+      $this->assertTrue(isset($menu[$item]), t("Menu route '@item' exists", $message_parameters));
+    }
+  }
+
+  public function testReportSave() {
+    $form_state = array(
+      'values' => array(
+        'erratum_uid' => 0,
+        'erratum_ip' => '127.0.0.1',
+        'erratum_location' => 'http://erratum.test',
+        'erratum_json' => '{"entity_type":"node","entity_id":"1","entity_vid":"1","field_name":"Body","fragment":"Fragment for report save test.","mail":"site_mail@site.com"}',
+      )
+    );
+
+    $pattern = '/Your report has been sent\. Thank you\./';
+    $result = erratum_save_report(array(), $form_state);
+    $this->assertTrue(isset($result['#commands'][1]['data']), t('Response data is correct.'));
+
+    if (isset($result['#commands'][1]['data'])) {
+      $this->assertTrue(preg_match($pattern, $result['#commands'][1]['data']), t('Report was saved.'));
+    }
+  }
+
+  public function testErratumVariable() {
+    $test_cases = array(
+      'erratum_mail' => '/^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$/',
+      'erratum_mail_limit' => '/^\d+$/',
+      'erratum_popup_text' => '/^.+$/',
+      'erratum_max_length' => '/^\d+$/',
+    );
+
+    foreach ($test_cases as $variable => $pattern) {
+      $result = variable_get($variable, '');
+      $message_parameters = array(
+        '@variable' => $variable,
+        '@result' => $result,
+      );
+      $this->assertTrue(preg_match($pattern, $result), t("Variable '@variable' setup in '@result'", $message_parameters));
+    }
+  }
+}
